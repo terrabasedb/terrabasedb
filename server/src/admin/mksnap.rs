@@ -48,7 +48,7 @@ where
             // Since snapshotting is disabled, we can't create a snapshot!
             // We'll just return an error returning the same
             return con
-                .write_response(&**responses::groups::SNAPSHOT_DISABLED)
+                .write_response(responses::groups::SNAPSHOT_DISABLED)
                 .await;
         }
         // We will just follow the standard convention of creating snapshots
@@ -61,7 +61,7 @@ where
             // if snapshots are enabled or not with `is_snapshot_enabled`
             snaphandle.snapcfg.as_ref().unsafe_unwrap()
         };
-        let snapengine = SnapshotEngine::new(snapstatus.max, &handle, None);
+        let snapengine = SnapshotEngine::new(snapstatus.max, handle, None);
         if snapengine.is_err() {
             was_engine_error = true;
         } else if snapstatus.is_busy() {
@@ -93,7 +93,7 @@ where
             }
         } else {
             return con
-                .write_response(&**responses::groups::SNAPSHOT_BUSY)
+                .write_response(responses::groups::SNAPSHOT_BUSY)
                 .await;
         }
     } else if act.len() == 1 {
@@ -119,7 +119,7 @@ where
             != 0;
         if illegal_snapshot {
             return con
-                .write_response(&**responses::groups::SNAPSHOT_ILLEGAL_NAME)
+                .write_response(responses::groups::SNAPSHOT_ILLEGAL_NAME)
                 .await;
         }
         let failed;

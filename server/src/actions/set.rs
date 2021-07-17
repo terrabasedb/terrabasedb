@@ -43,7 +43,7 @@ where
     T: ProtocolConnectionExt<Strm>,
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
-    crate::err_if_len_is!(act, con, not 2);
+    err_if_len_is!(act, con, not 2);
     let did_we = {
         if handle.is_poisoned() {
             None
@@ -67,13 +67,13 @@ where
     };
     if let Some(did_we) = did_we {
         if did_we {
-            con.write_response(&**responses::groups::OKAY).await?;
+            con.write_response(responses::groups::OKAY).await?;
         } else {
-            con.write_response(&**responses::groups::OVERWRITE_ERR)
+            con.write_response(responses::groups::OVERWRITE_ERR)
                 .await?;
         }
     } else {
-        con.write_response(&**responses::groups::SERVER_ERR).await?;
+        con.write_response(responses::groups::SERVER_ERR).await?;
     }
     Ok(())
 }

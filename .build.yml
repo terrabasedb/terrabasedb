@@ -7,4 +7,5 @@ steps:
   - name: test
     image: rust
     commands:
+      - apt update && apt-get install libhtml-parser-perl -y
       - make test

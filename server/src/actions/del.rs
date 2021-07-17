@@ -44,7 +44,7 @@ where
     T: ProtocolConnectionExt<Strm>,
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
-    crate::err_if_len_is!(act, con, eq 0);
+    err_if_len_is!(act, con, eq 0);
     let done_howmany: Option<usize>;
     {
         if handle.is_poisoned() {
@@ -63,6 +63,6 @@ where
     if let Some(done_howmany) = done_howmany {
         con.write_response(done_howmany).await
     } else {
-        con.write_response(&**responses::groups::SERVER_ERR).await
+        con.write_response(responses::groups::SERVER_ERR).await
     }
 }

@@ -38,8 +38,14 @@ use core::sync::atomic::Ordering;
 pub use htable::Data;
 use libsky::TResult;
 use std::sync::Arc;
+pub mod array;
+pub mod buffers;
 pub mod htable;
-mod lock;
+pub mod iarray;
+pub mod lazy;
+pub mod lock;
+pub mod memstore;
+pub mod table;
 
 /// This is a thread-safe database handle, which on cloning simply
 /// gives another atomic reference to the `shared` which is a `Shared` object
@@ -130,7 +136,7 @@ impl CoreDB {
         match query {
             Query::SimpleQuery(q) => {
                 con.write_simple_query_header().await?;
-                queryengine::execute_simple(&self, con, q).await?;
+                queryengine::execute_simple(self, con, q).await?;
                 con.flush_stream().await?;
             }
             // TODO(@ohsayan): Pipeline commands haven't been implemented yet
@@ -153,7 +159,7 @@ impl CoreDB {
             snap_count = Some(atmost);
         }
         let snapcfg =
-            libsky::option_unwrap_or!(snap_count.map(|max| Some(SnapshotStatus::new(*max))), None);
+            option_unwrap_or!(snap_count.map(|max| Some(SnapshotStatus::new(*max))), None);
         let db = if let Some(coremap) = coremap {
             CoreDB {
                 coremap,

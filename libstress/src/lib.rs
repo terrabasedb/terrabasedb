@@ -269,7 +269,6 @@ impl<Inp, UIn, Lv, Lp, Ex> Drop for Workpool<Inp, UIn, Lp, Lv, Ex> {
 
 pub mod utils {
     use rand::distributions::Alphanumeric;
-    use rayon::prelude::*;
     use std::collections::HashSet;
 
     pub fn ran_string(len: usize, rand: impl rand::Rng) -> String {
@@ -295,7 +294,7 @@ pub mod utils {
                 }
                 keys.insert(ran);
             });
-            keys.into_par_iter().collect()
+            keys.into_iter().collect()
         } else {
             (0..count)
                 .into_iter()

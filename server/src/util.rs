@@ -57,3 +57,65 @@ unsafe impl<T> Unwrappable<T> for Option<T> {
         }
     }
 }
+
+#[macro_export]
+macro_rules! consts {
+    ($($(#[$attr:meta])* $ident:ident : $ty:ty = $expr:expr;)*) => {
+        $(
+            $(#[$attr])*
+            const $ident: $ty = $expr;
+        )*
+    };
+    ($($(#[$attr:meta])* $vis:vis $ident:ident : $ty:ty = $expr:expr;)*) => {
+        $(
+            $(#[$attr])*
+            $vis const $ident: $ty = $expr;
+        )*
+    };
+}
+
+#[macro_export]
+macro_rules! typedef {
+    ($($(#[$attr:meta])* $ident:ident = $ty:ty;)*) => {
+        $($(#[$attr])* type $ident = $ty;)*
+    };
+    ($($(#[$attr:meta])* $vis:vis $ident:ident = $ty:ty;)*) => {
+        $($(#[$attr])* $vis type $ident = $ty;)*
+    };
+}
+
+#[macro_export]
+macro_rules! cfg_test {
+    ($($item:item)*) => {
+        $(#[cfg(test)] $item)*
+    };
+}
+
+#[macro_export]
+/// Compare two vectors irrespective of their elements' position
+macro_rules! veceq {
+    ($v1:expr, $v2:expr) => {
+        $v1.len() == $v2.len() && $v1.iter().all(|v| $v2.contains(v))
+    };
+}
+
+#[macro_export]
+macro_rules! assert_veceq {
+    ($v1:expr, $v2:expr) => {
+        assert!(veceq!($v1, $v2))
+    };
+}
+
+#[macro_export]
+macro_rules! hmeq {
+    ($h1:expr, $h2:expr) => {
+        $h1.len() == $h2.len() && $h1.iter().all(|(k, v)| $h2.get(k).unwrap().eq(v))
+    };
+}
+
+#[macro_export]
+macro_rules! assert_hmeq {
+    ($h1:expr, $h2: expr) => {
+        assert!(hmeq!($h1, $h2))
+    };
+}

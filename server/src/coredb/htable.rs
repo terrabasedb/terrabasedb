@@ -24,6 +24,7 @@
  *
 */
 
+use crate::coredb::array::Array;
 use bytes::Bytes;
 use libsky::TResult;
 use serde::{Deserialize, Serialize};
@@ -50,18 +51,21 @@ where
 }
 
 impl<K: Eq + Hash + Clone + Serialize, V: Clone + Serialize> HTable<K, V> {
-    /// Create a new, empty in-memory table
-    pub fn new() -> Self {
-        Self {
-            inner: Arc::new(Coremap::new()),
-            _marker_key: PhantomData,
-            _marker_value: PhantomData,
-        }
-    }
     /// Initialize a new HTable instance from an existing [`Coremap`]
     pub fn from_raw(inner: Coremap<K, V>) -> Self {
         Self {
             inner: Arc::new(inner),
+            _marker_key: PhantomData,
+            _marker_value: PhantomData,
+        }
+    }
+}
+
+impl<K: Eq + Hash, V> HTable<K, V> {
+    /// Create a new, empty in-memory table
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(Coremap::new()),
             _marker_key: PhantomData,
             _marker_value: PhantomData,
         }
@@ -82,9 +86,13 @@ where
 }
 
 use dashmap::iter::Iter;
-use dashmap::mapref::entry::Entry;
+pub use dashmap::lock::RwLock as MapRWL;
+pub use dashmap::lock::RwLockReadGuard as MapRWLGuard;
+pub use dashmap::mapref::entry::Entry as MapEntry;
+pub use dashmap::mapref::one::Ref as MapSingleReference;
 use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
+pub use dashmap::SharedValue;
 pub type HashTable<K, V> = DashMap<K, V>;
 
 #[derive(Debug)]
@@ -94,7 +102,7 @@ pub struct Coremap<K, V>
 where
     K: Eq + Hash,
 {
-    inner: HashTable<K, V>,
+    pub(crate) inner: HashTable<K, V>,
 }
 
 impl<K: Eq + Hash, V> Deref for HTable<K, V> {
@@ -104,17 +112,24 @@ impl<K: Eq + Hash, V> Deref for HTable<K, V> {
     }
 }
 
-impl<K, V> Coremap<K, V>
-where
-    K: Eq + Hash + Serialize,
-    V: Serialize,
-{
+impl<K: Eq + Hash, V> Coremap<K, V> {
     /// Create an empty coremap
     pub fn new() -> Self {
         Coremap {
             inner: HashTable::new(),
         }
     }
+    pub fn with_capacity(cap: usize) -> Self {
+        Coremap {
+            inner: HashTable::with_capacity(cap),
+        }
+    }
+}
+
+impl<K, V> Coremap<K, V>
+where
+    K: Eq + Hash,
+{
     /// Returns the total number of key value pairs
     pub fn len(&self) -> usize {
         self.inner.len()
@@ -161,12 +176,15 @@ where
     }
     /// Returns true if the non-existent key was assigned to a value
     pub fn true_if_insert(&self, k: K, v: V) -> bool {
-        if let Entry::Vacant(ve) = self.inner.entry(k) {
+        if let MapEntry::Vacant(ve) = self.inner.entry(k) {
             ve.insert(v);
             true
         } else {
             false
         }
+    }
+    pub fn true_remove_if(&self, key: &K, exec: impl FnOnce(&K, &V) -> bool) -> bool {
+        self.inner.remove_if(key, exec).is_some()
     }
     /// Update or insert
     pub fn upsert(&self, k: K, v: V) {
@@ -174,13 +192,20 @@ where
     }
     /// Returns true if the value was updated
     pub fn true_if_update(&self, k: K, v: V) -> bool {
-        if let Entry::Occupied(mut oe) = self.inner.entry(k) {
+        if let MapEntry::Occupied(mut oe) = self.inner.entry(k) {
             oe.insert(v);
             true
         } else {
             false
         }
     }
+}
+
+impl<K, V> Coremap<K, V>
+where
+    K: Eq + Hash + Serialize,
+    V: Serialize,
+{
     /// Serialize the hashtable into a `Vec<u8>` that can be saved to a file
     pub fn serialize(&self) -> TResult<Vec<u8>> {
         bincode::serialize(&self.inner).map_err(|e| e.into())
@@ -188,11 +213,6 @@ where
 }
 
 impl Coremap<Data, Data> {
-    /// Returns a `Coremap<Data, Data>` from the provided file (as a `Vec<u8>`)
-    pub fn deserialize(src: Vec<u8>) -> TResult<Self> {
-        let h: HashTable<Data, Data> = bincode::deserialize(&src)?;
-        Ok(Self { inner: h })
-    }
     /// Returns atleast `count` number of keys from the hashtable
     pub fn get_keys(&self, count: usize) -> Vec<Bytes> {
         let mut v = Vec::with_capacity(count);
@@ -201,6 +221,18 @@ impl Coremap<Data, Data> {
             .map(|kv| kv.key().get_blob().clone())
             .for_each(|key| v.push(key));
         v
+    }
+    /// Returns a `Coremap<Data, Data>` from the provided file (as a `Vec<u8>`)
+    pub fn deserialize(src: Vec<u8>) -> TResult<Self> {
+        let h: HashTable<Data, Data> = bincode::deserialize(&src)?;
+        Ok(Self { inner: h })
+    }
+}
+impl<const M: usize, const N: usize> Coremap<Array<u8, M>, Array<u8, N>> {
+    #[cfg(test)]
+    pub fn deserialize_array(bytes: Vec<u8>) -> TResult<Self> {
+        let h: HashTable<Array<u8, M>, Array<u8, N>> = bincode::deserialize(&bytes)?;
+        Ok(Self { inner: h })
     }
 }
 impl<K: Eq + Hash, V> IntoIterator for Coremap<K, V> {
@@ -220,7 +252,7 @@ impl Deref for Data {
 
 impl Borrow<[u8]> for Data {
     fn borrow(&self) -> &[u8] {
-        &self.blob.borrow()
+        self.blob.borrow()
     }
 }
 
@@ -287,6 +319,12 @@ impl Data {
     pub fn into_inner(self) -> Bytes {
         self.blob
     }
+    #[allow(clippy::needless_lifetimes)]
+    pub fn copy_from_slice<'a>(slice: &'a [u8]) -> Self {
+        Self {
+            blob: Bytes::copy_from_slice(slice),
+        }
+    }
 }
 
 impl Eq for Data {}
@@ -352,7 +390,7 @@ fn test_de() {
         Data::from_string("is writing open-source code".to_owned()),
     );
     let ser = x.serialize().unwrap();
-    let de = Coremap::deserialize(ser).unwrap();
+    let de = Coremap::<Data, Data>::deserialize(ser).unwrap();
     assert!(de.contains_key(&Data::from("sayan")));
     assert!(de.len() == x.len());
     let hmap: Coremap<Data, Data> = Coremap::new();

@@ -38,7 +38,7 @@ where
     T: ProtocolConnectionExt<Strm>,
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
-    crate::err_if_len_is!(act, con, not 0);
+    err_if_len_is!(act, con, not 0);
     let failed;
     {
         if handle.is_poisoned() {
@@ -49,8 +49,8 @@ where
         }
     }
     if failed {
-        con.write_response(&**responses::groups::SERVER_ERR).await
+        con.write_response(responses::groups::SERVER_ERR).await
     } else {
-        con.write_response(&**responses::groups::OKAY).await
+        con.write_response(responses::groups::OKAY).await
     }
 }

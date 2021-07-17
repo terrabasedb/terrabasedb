@@ -108,7 +108,7 @@ impl<'a> SnapshotEngine<'a> {
         } else {
             (maxtop, false)
         };
-        let snap_dir = libsky::option_unwrap_or!(snap_dir, DIR_SNAPSHOT);
+        let snap_dir = option_unwrap_or!(snap_dir, DIR_SNAPSHOT);
         match fs::create_dir(snap_dir) {
             Ok(_) => (),
             Err(e) => match e.kind() {
@@ -136,7 +136,7 @@ impl<'a> SnapshotEngine<'a> {
                                 "The snapshot file names have invalid characters. This should not happen! Please report an error")
                             );
                             };
-                            if SNAP_MATCH.is_match(&file_name) {
+                            if SNAP_MATCH.is_match(file_name) {
                                 // Good, the file name matched the format we were expecting
                                 // This is a valid snapshot, add it to our `Vec` of snaps
                                 snaps.push(path);
@@ -309,7 +309,7 @@ fn test_snapshot() {
         crate::coredb::Data::from(String::from("ohhey")),
         crate::coredb::Data::from_string(String::from("heya!")),
     );
-    let mut snapengine = SnapshotEngine::new(4, &db, Some(&ourdir)).unwrap();
+    let mut snapengine = SnapshotEngine::new(4, &db, Some(ourdir)).unwrap();
     let _ = snapengine.mksnap_test();
     let current = snapengine.get_snapshots().next().unwrap();
     let read_hmap = diskstore::test_deserialize(fs::read(PathBuf::from(current)).unwrap()).unwrap();

@@ -40,7 +40,7 @@ where
     T: ProtocolConnectionExt<Strm>,
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
-    crate::err_if_len_is!(act, con, eq 0);
+    err_if_len_is!(act, con, eq 0);
     let mut how_many_of_them_exist = 0usize;
     {
         let cmap = handle.get_ref();

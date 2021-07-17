@@ -51,7 +51,10 @@ jobs:
           brew install gnu-tar
           echo "/usr/local/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
         if: runner.os == 'macOS'
-
+      - name: Install perl modules
+        uses: perl-actions/install-with-cpanm@v1
+        with:
+          install: "HTML::Entities"
       - name: Setup environment
         run: |
           chmod +x ci/setvars.sh
@@ -145,6 +148,10 @@ jobs:
         run: |
           chmod +x ci/setvars.sh
           ci/setvars.sh
+      - name: Install perl modules
+        uses: perl-actions/install-with-cpanm@v1
+        with:
+          install: "HTML::Entities"
 
       - name: Cache Cargo registry
         uses: actions/cache@v2
@@ -218,6 +225,10 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 2
+      - name: Install perl modules
+        uses: perl-actions/install-with-cpanm@v1
+        with:
+          install: "HTML::Entities"
 
       - name: Setup environment
         run: |
@@ -280,7 +291,7 @@ jobs:
           fetch-depth: 2
       - name: Set up tools
         run: |
-          sudo apt update && sudo apt install awscli zip zstd -y
+          sudo apt update && sudo apt install awscli zip zstd perl libhtml-parser-perl -y
           aws configure set aws_access_key_id ${{ secrets.STORAGE_ACCESS_KEY }}
           aws configure set aws_secret_access_key ${{ secrets.STORAGE_ACCESS_SECRET }}
           aws configure set default.s3.signature_version s3v4

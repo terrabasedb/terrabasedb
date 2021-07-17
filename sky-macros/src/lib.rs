@@ -247,3 +247,100 @@ fn parse_string(int: syn::Lit, span: Span, field: &str) -> Result<String, syn::E
 pub fn dbtest(args: TokenStream, item: TokenStream) -> TokenStream {
     parse_test_module(args, item)
 }
+
+#[proc_macro_attribute]
+pub fn array(args: TokenStream, item: TokenStream) -> TokenStream {
+    let args = syn::parse_macro_input!(args as syn::AttributeArgs);
+    if !args.is_empty() {
+        syn::Error::new(proc_macro2::Span::call_site(), "Expected 0 arguments")
+            .to_compile_error()
+            .into()
+    } else {
+        // fine, so there's something
+        let item = item.to_string();
+        if !(item.starts_with("const") || item.starts_with("pub const") || item.starts_with("let"))
+        {
+            syn::Error::new_spanned(item, "Expected a `const` or `let` declaration")
+                .to_compile_error()
+                .into()
+        } else {
+            // fine, so it's [let|pub|pub const] : [ty; len] = [1, 2, 3, 4];
+            let item = item.trim();
+            let ret: Vec<&str> = item.split('=').collect();
+            if ret.len() != 2 {
+                syn::Error::new_spanned(item, "Expected a `const` or `let` assignment")
+                    .to_compile_error()
+                    .into()
+            } else {
+                // so we have the form we expect
+                let (declaration, expression) = (ret[0], ret[1]);
+                let expression = expression.trim().replace(" ;", "");
+                if !(expression.starts_with('[') && expression.ends_with(']')) {
+                    syn::Error::new_spanned(declaration, "Expected an array")
+                        .to_compile_error()
+                        .into()
+                } else {
+                    let expression = &expression[1..expression.len() - 1];
+                    // so we have the raw numbers, separated by commas
+                    let count_provided = expression.split(',').count();
+                    let declarations: Vec<&str> = declaration.split(':').collect();
+                    if declarations.len() != 2 {
+                        syn::Error::new_spanned(declaration, "Expected a type")
+                            .to_compile_error()
+                            .into()
+                    } else {
+                        // so we have two parts, let's look at the second part: [ty; len]
+                        let starts_ends =
+                            declarations[1].starts_with('[') && declarations[1].ends_with(']');
+                        let ret: Vec<&str> = declarations[1].split(';').collect();
+                        if ret.len() != 2 || starts_ends {
+                            syn::Error::new_spanned(declaration, "Expected [T; N]")
+                                .to_compile_error()
+                                .into()
+                        } else {
+                            // so we have [T; N], let's make it T; N
+                            let len = declarations[1].len();
+                            // decl hash T; N
+                            let decl = &declarations[1][1..len - 1];
+                            let expr: Vec<&str> = decl.split(';').collect();
+                            let (_, count) = (expr[0], expr[1].replace(']', ""));
+                            let count = count.trim();
+                            let count = match count.parse::<usize>() {
+                                Ok(cnt) => cnt,
+                                Err(_) => {
+                                    return syn::Error::new_spanned(
+                                        count,
+                                        "Expected `[T; N]` where `N` is a positive integer",
+                                    )
+                                    .to_compile_error()
+                                    .into()
+                                }
+                            };
+                            let repeats = count - count_provided;
+                            // we have uninit, uninit, uninit, uninit, uninit,
+                            let repeat_str = "core::mem::MaybeUninit::uninit(),".repeat(repeats);
+                            // expression has 1, 2, 3, 4
+                            let expression: String = expression
+                                .split(',')
+                                .map(|s| {
+                                    let mut st = String::new();
+                                    st.push_str("MaybeUninit::new(");
+                                    st.push_str(&s);
+                                    st.push(')');
+                                    st.push(',');
+                                    st
+                                })
+                                .collect();
+                            // remove the trailing comma
+                            let expression = &expression[..expression.len() - 1];
+                            // let's join them
+                            let ret = "[".to_owned() + expression + "," + &repeat_str + "];";
+                            let ret = declaration.to_owned() + "=" + &ret;
+                            ret.parse().unwrap()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

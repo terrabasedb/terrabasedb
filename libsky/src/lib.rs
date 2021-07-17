@@ -27,7 +27,7 @@
 #![deny(unused_crate_dependencies)]
 #![deny(unused_imports)]
 
-//! The core library for the Skytable
+//! The core library for Skytable
 //!
 //! This contains modules which are shared by both the `cli` and the `server` modules
 

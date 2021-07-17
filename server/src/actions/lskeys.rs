@@ -40,13 +40,13 @@ where
     T: ProtocolConnectionExt<Strm>,
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
-    crate::err_if_len_is!(act, con, gt 1);
+    err_if_len_is!(act, con, gt 1);
     let item_count = if let Some(cnt) = act.next() {
         if let Ok(cnt) = cnt.parse::<usize>() {
             cnt
         } else {
             return con
-                .write_response(&**responses::groups::WRONGTYPE_ERR)
+                .write_response(responses::groups::WRONGTYPE_ERR)
                 .await;
         }
     } else {

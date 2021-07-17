@@ -24,8 +24,10 @@
  *
 */
 
-#[derive(Debug, PartialEq)]
+use bytes::Bytes;
+
 #[non_exhaustive]
+#[derive(Debug, PartialEq)]
 /// # Data Types
 ///
 /// This enum represents the data types supported by the Skyhash Protocol
@@ -38,4 +40,8 @@ pub enum Element {
     UnsignedInt(u64),
     /// A non-recursive String array; tsymbol: `_`
     FlatArray(Vec<String>),
+    /// Swap the KS (ASCII `1A` (SUB HEADER))
+    SwapKSHeader(Bytes),
+    /// Swap the NS (ASCII `0x1B` (ESC HEADER))
+    SwapNSHeader(Bytes),
 }

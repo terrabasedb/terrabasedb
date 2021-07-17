@@ -283,7 +283,7 @@ impl ParsedConfig {
     /// TOML file (represented as an object)
     fn from_config(cfg_info: Config) -> Self {
         ParsedConfig {
-            noart: libsky::option_unwrap_or!(cfg_info.server.noart, false),
+            noart: option_unwrap_or!(cfg_info.server.noart, false),
             bgsave: if let Some(bgsave) = cfg_info.bgsave {
                 match (bgsave.enabled, bgsave.every) {
                     // TODO: Show a warning that there are unused keys
@@ -301,7 +301,7 @@ impl ParsedConfig {
                     SnapshotConfig::Enabled(SnapshotPref::new(
                         snapshot.every,
                         snapshot.atmost,
-                        libsky::option_unwrap_or!(snapshot.failsafe, true),
+                        option_unwrap_or!(snapshot.failsafe, true),
                     ))
                 })
                 .unwrap_or_else(SnapshotConfig::default),
@@ -332,7 +332,7 @@ impl ParsedConfig {
                     port: cfg_info.server.port,
                 }
             },
-            maxcon: libsky::option_unwrap_or!(cfg_info.server.maxclient, MAXIMUM_CONNECTION_LIMIT),
+            maxcon: option_unwrap_or!(cfg_info.server.maxclient, MAXIMUM_CONNECTION_LIMIT),
         }
     }
     #[cfg(test)]
@@ -562,7 +562,7 @@ pub fn get_config_file_or_return_cfg() -> Result<ConfigType<ParsedConfig, String
             },
             None => None,
         };
-        let failsafe = if let Ok(failsafe) = libsky::option_unwrap_or!(
+        let failsafe = if let Ok(failsafe) = option_unwrap_or!(
             matches
                 .value_of("stop-write-on-fail")
                 .map(|val| val.parse::<bool>()),

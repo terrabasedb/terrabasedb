@@ -46,7 +46,7 @@ macro_rules! gen_constants_and_matches {
         }
         let mut first = match $buf.next() {
             Some(first) => first,
-            None => return $con.write_response(&**responses::groups::PACKET_ERR).await,
+            None => return $con.write_response(responses::groups::PACKET_ERR).await,
         };
         first.make_ascii_uppercase();
         match first.as_str() {
@@ -54,7 +54,7 @@ macro_rules! gen_constants_and_matches {
                 tags::$action => $fns($db, $con, $buf).await?,
             )*
             _ => {
-                return $con.write_response(&**responses::groups::UNKNOWN_ACTION).await;
+                return $con.write_response(responses::groups::UNKNOWN_ACTION).await;
             }
         }
     };
@@ -70,7 +70,7 @@ where
         arr
     } else {
         return con
-            .write_response(&**responses::full_responses::R_WRONGTYPE_ERR)
+            .write_response(responses::full_responses::R_WRONGTYPE_ERR)
             .await;
     };
     let mut buf = buf.into_iter();

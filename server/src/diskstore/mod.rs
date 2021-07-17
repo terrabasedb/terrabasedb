@@ -28,6 +28,7 @@
 
 use crate::coredb::htable::Coremap;
 use crate::coredb::htable::HTable;
+use crate::coredb::lazy::Lazy;
 use crate::coredb::Data;
 use crate::diskstore::snapshot::DIR_SNAPSHOT;
 use libsky::TResult;
@@ -39,9 +40,8 @@ pub mod flock;
 pub mod snapshot;
 mod snapstore;
 
-lazy_static::lazy_static! {
-    pub static ref PERSIST_FILE: PathBuf = PathBuf::from("./data/data.bin");
-}
+pub static PERSIST_FILE: Lazy<PathBuf, fn() -> PathBuf> =
+    Lazy::new(|| PathBuf::from("./data/data.bin"));
 
 fn get_snapshot(path: String) -> TResult<Option<HTable<Data, Data>>> {
     // the path just has the snapshot name, let's improve that

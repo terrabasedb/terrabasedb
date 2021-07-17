@@ -26,6 +26,7 @@
 
 //! Utilities for generating responses, which are only used by the `server`
 //!
+use crate::coredb::buffers::Integer64;
 use bytes::Bytes;
 use skytable::RespCode;
 use std::future::Future;
@@ -135,7 +136,7 @@ impl Writable for BytesWrapper {
             // type operator `+` to the stream
             con.write_lowlevel(&[b'+']).await?;
             // Now get the size of the Bytes object as bytes
-            let size = bytes.len().to_string().into_bytes();
+            let size = Integer64::from(bytes.len());
             // Write this to the stream
             con.write_lowlevel(&size).await?;
             // Now write a LF character
@@ -164,7 +165,7 @@ impl Writable for RespCode {
                 let e = e.to_string().into_bytes();
                 // Now get the length of the byte vector and turn it into
                 // a string and then into a byte vector
-                let len_as_bytes = e.len().to_string().into_bytes();
+                let len_as_bytes = Integer64::from(e.len());
                 // Write the length
                 con.write_lowlevel(&len_as_bytes).await?;
                 // Then an LF
@@ -201,7 +202,7 @@ impl Writable for usize {
         async fn write_bytes(con: &mut impl IsConnection, val: usize) -> Result<(), IoError> {
             con.write_lowlevel(b":").await?;
             let usize_bytes = val.to_string().into_bytes();
-            let usize_bytes_len = usize_bytes.len().to_string().into_bytes();
+            let usize_bytes_len = Integer64::from(usize_bytes.len());
             con.write_lowlevel(&usize_bytes_len).await?;
             con.write_lowlevel(b"\n").await?;
             con.write_lowlevel(&usize_bytes).await?;
@@ -220,7 +221,7 @@ impl Writable for u64 {
         async fn write_bytes(con: &mut impl IsConnection, val: u64) -> Result<(), IoError> {
             con.write_lowlevel(b":").await?;
             let usize_bytes = val.to_string().into_bytes();
-            let usize_bytes_len = usize_bytes.len().to_string().into_bytes();
+            let usize_bytes_len = Integer64::from(usize_bytes.len());
             con.write_lowlevel(&usize_bytes_len).await?;
             con.write_lowlevel(b"\n").await?;
             con.write_lowlevel(&usize_bytes).await?;

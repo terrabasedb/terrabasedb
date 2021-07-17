@@ -43,7 +43,7 @@ where
     T: ProtocolConnectionExt<Strm>,
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
-    crate::err_if_len_is!(act, con, not 1);
+    err_if_len_is!(act, con, not 1);
     let res: Option<Bytes> = {
         let reader = handle.get_ref();
         unsafe {
@@ -59,7 +59,7 @@ where
         con.write_response(BytesWrapper(value)).await?;
     } else {
         // Ah, couldn't find that key
-        con.write_response(&**responses::groups::NIL).await?;
+        con.write_response(responses::groups::NIL).await?;
     }
     Ok(())
 }

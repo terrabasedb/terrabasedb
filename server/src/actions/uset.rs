@@ -42,11 +42,11 @@ where
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
     let howmany = act.len();
-    if howmany & 1 == 1 || howmany == 0 {
+    if is_lowbit_set!(howmany) || howmany == 0 {
         // An odd number of arguments means that the number of keys
         // is not the same as the number of values, we won't run this
         // action at all
-        return con.write_response(&**responses::groups::ACTION_ERR).await;
+        return con.write_response(responses::groups::ACTION_ERR).await;
     }
     let failed = {
         if handle.is_poisoned() {
@@ -60,7 +60,7 @@ where
         }
     };
     if failed {
-        con.write_response(&**responses::groups::SERVER_ERR).await
+        con.write_response(responses::groups::SERVER_ERR).await
     } else {
         con.write_response(howmany / 2).await
     }

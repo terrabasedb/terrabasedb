@@ -39,7 +39,15 @@
 mod element;
 pub mod responses;
 use crate::util::Unwrappable;
+use bytes::Bytes;
 pub use element::Element;
+
+const ASCII_CONTROL_SUB_HEADER: u8 = 0x1A_u8;
+const ASCII_CONTROL_ESC_HEADER: u8 = 0x1B_u8;
+const ASCII_UNDERSCORE: u8 = b'_';
+const ASCII_AMPERSAND: u8 = b'&';
+const ASCII_COLON: u8 = b':';
+const ASCII_PLUS_SIGN: u8 = b'+';
 
 #[derive(Debug)]
 /// # Skyhash Deserializer (Parser)
@@ -287,6 +295,18 @@ impl<'a> Parser<'a> {
             Err(ParseError::UnexpectedByte)
         }
     }
+    /// Should be at the `\x1A` (SUB header)
+    fn parse_next_byte(&mut self) -> ParseResult<Bytes> {
+        let our_chunk = self.__get_next_element()?;
+        let our_ks_name = Bytes::copy_from_slice(our_chunk);
+        if self.will_cursor_give_linefeed()? {
+            // end has LF; go on
+            self.incr_cursor();
+            Ok(our_ks_name)
+        } else {
+            Err(ParseError::NotEnough)
+        }
+    }
     /// The cursor should have passed the `:` tsymbol
     fn parse_next_u64(&mut self) -> ParseResult<u64> {
         let our_u64_chunk = self.__get_next_element()?;
@@ -307,10 +327,14 @@ impl<'a> Parser<'a> {
             // but advance the cursor before doing that
             self.incr_cursor();
             let ret = match *tsymbol {
-                b'+' => Element::String(self.parse_next_string()?),
-                b':' => Element::UnsignedInt(self.parse_next_u64()?),
-                b'&' => Element::Array(self.parse_next_array()?),
-                b'_' => Element::FlatArray(self.parse_next_flat_array()?),
+                ASCII_PLUS_SIGN => Element::String(self.parse_next_string()?),
+                ASCII_COLON => Element::UnsignedInt(self.parse_next_u64()?),
+                ASCII_AMPERSAND => Element::Array(self.parse_next_array()?),
+                ASCII_UNDERSCORE => Element::FlatArray(self.parse_next_flat_array()?),
+                // switch keyspace with SUB
+                ASCII_CONTROL_SUB_HEADER => Element::SwapKSHeader(self.parse_next_byte()?),
+                // switch namespace with ESC
+                ASCII_CONTROL_ESC_HEADER => Element::SwapNSHeader(self.parse_next_byte()?),
                 _ => return Err(ParseError::UnknownDatatype),
             };
             Ok(ret)
@@ -760,4 +784,40 @@ fn test_u64_incomplete() {
     let bytes = "*1\n:".as_bytes();
     let res = Parser::new(&bytes).parse().unwrap_err();
     assert_eq!(res, ParseError::NotEnough);
+}
+
+#[test]
+fn test_ks_sub() {
+    let bytes = [
+        b"*1\n",
+        &[ASCII_CONTROL_SUB_HEADER][..],
+        &[b'5', b'\n'][..],
+        b"sayan\n",
+    ]
+    .concat();
+    assert_eq!(
+        Parser::new(&bytes).parse().unwrap(),
+        (
+            Query::SimpleQuery(Element::SwapKSHeader("sayan".into())),
+            bytes.len()
+        )
+    );
+}
+
+#[test]
+fn test_ns_sub() {
+    let bytes = [
+        b"*1\n",
+        &[ASCII_CONTROL_ESC_HEADER][..],
+        &[b'5', b'\n'][..],
+        b"sayan\n",
+    ]
+    .concat();
+    assert_eq!(
+        Parser::new(&bytes).parse().unwrap(),
+        (
+            Query::SimpleQuery(Element::SwapNSHeader("sayan".into())),
+            bytes.len()
+        )
+    );
 }

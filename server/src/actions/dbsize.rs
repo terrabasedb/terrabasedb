@@ -37,7 +37,7 @@ where
     T: ProtocolConnectionExt<Strm>,
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
-    crate::err_if_len_is!(act, con, not 0);
+    err_if_len_is!(act, con, not 0);
     let len;
     {
         len = handle.get_ref().len();

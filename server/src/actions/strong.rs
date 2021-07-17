@@ -55,8 +55,8 @@ where
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
     let howmany = act.len();
-    if howmany & 1 == 1 || howmany == 0 {
-        return con.write_response(&**responses::groups::ACTION_ERR).await;
+    if is_lowbit_set!(howmany) || howmany == 0 {
+        return con.write_response(responses::groups::ACTION_ERR).await;
     }
     let failed;
     {
@@ -93,13 +93,13 @@ where
     }
     if let Some(failed) = failed {
         if failed {
-            con.write_response(&**responses::groups::OVERWRITE_ERR)
+            con.write_response(responses::groups::OVERWRITE_ERR)
                 .await
         } else {
-            con.write_response(&**responses::groups::OKAY).await
+            con.write_response(responses::groups::OKAY).await
         }
     } else {
-        con.write_response(&**responses::groups::SERVER_ERR).await
+        con.write_response(responses::groups::SERVER_ERR).await
     }
 }
 
@@ -118,7 +118,7 @@ where
 {
     let howmany = act.len();
     if howmany == 0 {
-        return con.write_response(&**responses::groups::ACTION_ERR).await;
+        return con.write_response(responses::groups::ACTION_ERR).await;
     }
     let failed;
     {
@@ -150,12 +150,12 @@ where
     }
     if let Some(failed) = failed {
         if failed {
-            con.write_response(&**responses::groups::NIL).await
+            con.write_response(responses::groups::NIL).await
         } else {
-            con.write_response(&**responses::groups::OKAY).await
+            con.write_response(responses::groups::OKAY).await
         }
     } else {
-        con.write_response(&**responses::groups::SERVER_ERR).await
+        con.write_response(responses::groups::SERVER_ERR).await
     }
 }
 
@@ -173,8 +173,8 @@ where
     Strm: AsyncReadExt + AsyncWriteExt + Unpin + Send + Sync,
 {
     let howmany = act.len();
-    if howmany & 1 == 1 || howmany == 0 {
-        return con.write_response(&**responses::groups::ACTION_ERR).await;
+    if is_lowbit_set!(howmany) || howmany == 0 {
+        return con.write_response(responses::groups::ACTION_ERR).await;
     }
     let mut failed = Some(false);
     {
@@ -216,11 +216,11 @@ where
     }
     if let Some(failed) = failed {
         if failed {
-            con.write_response(&**responses::groups::NIL).await
+            con.write_response(responses::groups::NIL).await
         } else {
-            con.write_response(&**responses::groups::OKAY).await
+            con.write_response(responses::groups::OKAY).await
         }
     } else {
-        con.write_response(&**responses::groups::SERVER_ERR).await
+        con.write_response(responses::groups::SERVER_ERR).await
     }
 }
